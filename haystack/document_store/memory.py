@@ -17,11 +17,12 @@ class InMemoryDocumentStore(BaseDocumentStore):
         In-memory document store
     """
 
-    def __init__(self, embedding_field: Optional[str] = "embedding", return_embedding: bool = False):
+    def __init__(self, embedding_field: str = "embedding", return_embedding: bool = False):
         self.indexes: Dict[str, Dict] = defaultdict(dict)
         self.index: str = "document"
         self.label_index: str = "label"
-        self.embedding_field: str = embedding_field if embedding_field is not None else "embedding"
+        self.text_field: str = "text"
+        self.embedding_field: str = embedding_field
         self.embedding_dim: int = 768
         self.return_embedding: bool = return_embedding
 
@@ -41,7 +42,10 @@ class InMemoryDocumentStore(BaseDocumentStore):
         """
         index = index or self.index
 
-        documents_objects = [Document.from_dict(d) if isinstance(d, dict) else d for d in documents]
+        documents_objects = [
+            Document.from_dict(d, field_map=self._create_document_field_map()) if isinstance(d, dict) else d
+            for d in documents
+        ]
 
         for document in documents_objects:
             self.indexes[index][document.id] = document
@@ -164,7 +168,7 @@ class InMemoryDocumentStore(BaseDocumentStore):
         """
         index = index or self.label_index
         return len(self.indexes[index].items())
-      
+
     def get_all_documents(
             self,
             index: Optional[str] = None,
@@ -260,3 +264,6 @@ class InMemoryDocumentStore(BaseDocumentStore):
             raise NotImplementedError("Delete by filters is not implemented for InMemoryDocumentStore.")
         index = index or self.index
         self.indexes[index] = {}
+
+    def _create_document_field_map(self) -> Dict:
+        return {self.text_field: "text", self.embedding_field: "embedding"}
